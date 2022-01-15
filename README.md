@@ -1,34 +1,162 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+## Cara menambahkan firebase cloud message pada next.js
 
-## Getting Started
+1. Buat file baru pada `public/firebase-messaging-sw.js`
 
-First, run the development server:
+```
+importScripts("https://www.gstatic.com/firebasejs/8.2.1/firebase-app.js");
+importScripts("https://www.gstatic.com/firebasejs/8.2.1/firebase-messaging.js");
 
-```bash
-npm run dev
-# or
-yarn dev
+firebase.initializeApp({
+  apiKey: "AIzaSyDFfiYiF_xcndlGcimvENwNZS27XuFco84",
+  authDomain: "minangphotograyapp.firebaseapp.com",
+  projectId: "minangphotograyapp",
+  storageBucket: "minangphotograyapp.appspot.com",
+  messagingSenderId: "151977759964",
+  appId: "1:151977759964:web:5a2a4455f49d9fd5fa9019",
+  measurementId: "G-2M1SSNTTFV",
+});
+
+// Retrieve an instance of Firebase Messaging so that it can handle background
+// messages.
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage(function (payload) {
+  console.log(
+    "[firebase-messaging-sw.js] Received background message ",
+    payload
+  );
+  // Customize notification here
+  const notificationTitle = "Background Message Title";
+  const notificationOptions = {
+    body: "Background Message body.",
+    icon: "/firebase-logo.png",
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Pada file `pages/index.js` tambahkan variable dan method baru
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+variable inisial key firebase
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+```
+export default class App extends React.Component {
+  firebaseConfig = {
+    apiKey: "AIzaSyDFfiYiF_xcndlGcimvENwNZS27XuFco84",
+    authDomain: "minangphotograyapp.firebaseapp.com",
+    projectId: "minangphotograyapp",
+    storageBucket: "minangphotograyapp.appspot.com",
+    messagingSenderId: "151977759964",
+    appId: "1:151977759964:web:5a2a4455f49d9fd5fa9019",
+    measurementId: "G-2M1SSNTTFV",
+  };
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+  fcmConfig = {
+    vapidKey:
+      "BGkGvWzImHbn8b0-GOdocVVMLIIU1KspcqUYs5Nld40kVbKzIe7jsO-hRCOXjUvvfQ_0Ttg6XKlRsvzPzkp6tmM",
+  };
 
-## Learn More
+  ...
+}
 
-To learn more about Next.js, take a look at the following resources:
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+method inisial firebase
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+```
 
-## Deploy on Vercel
+export default class App extends React.Component {
+    ...
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+    componentDidMount = () => {
+        this.firebaseCloudMessageInit();
+    };
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+    firebaseCloudMessageInit = async () => {
+        // start request permission
+        const permissionStatus = await Notification.requestPermission();
+        if (permissionStatus && permissionStatus == "granted") {
+        // init firebase
+        const firebaseApp = initializeApp(this.firebaseConfig);
+
+        // init messaging
+        const messaging = getMessaging(firebaseApp);
+        const token = await getToken(messaging, this.fcmConfig);
+
+        // show token from console log
+        console.log("Firebase Cloud Messaging Client Token : \n" + token);
+        // console-log-output# Firebase Cloud Messaging Client Token : dd5EOxW2Ffs26-yAnRpoKv:APA91bEzNtCbB1vQ7TNdXJtLuaHwa62GzoKZHsZhC5AqTQE32gXSufJnUxoXSNSznauo44aIJb5uYDbPGDHi-l-40RoFcc6ibmDdwaHv_ej0gGqz-GbWOqPPAnyMEjYLVtMgoHxoYrW3
+
+        // start event on message
+        onMessage(messaging, resultMessage => {
+            // show data result message from console log
+            console.log("Data message result \n", resultMessage);
+
+            /**
+            *console-log-output#
+            *
+            *{
+            *    "from": "151977759964",
+            *    "collapseKey": "do_not_collapse",
+            *    "messageId": "120f7d49-01d1-4465-9df6-c9e1fe219577",
+            *    "notification": {
+            *        "title": "Breaking News",
+            *        "body": "New news story available."
+            *    }
+            *}
+            */
+        });
+        }
+    };
+
+    ...
+}
+
+```
+
+3. Pakai google api untuk mengirimkan pesan
+
+Method
+```
+POST
+```
+
+Header
+
+```
+Content-Type:application/json
+Authorization:key=AAAAI2KUlNw:APA91bGEhnZyXXXXXXXXXX-JUPgLdn09XG7rnx2UYGVSjqq8jS2wOqYj9wEIuJgeeuXXXXXXXXXX-LE8eFnafO0JaPDvNY8EqXXXXXXXXXX-AUvOdDMog4lzr1VJLdiMxlXXXXXXXXXX
+
+
+
+```
+Body
+```
+{
+  "registration_ids": ["dd5EOxW2Ffs26-yAnRpoKv:APA91bEzNtCbB1vQ7TNdXJtLuaHwa62GzoKZHsZhC5AqTQE32gXSufJnUxoXSNSznauo44aIJb5uYDbPGDHi-l-40RoFcc6ibmDdwaHv_ej0gGqz-GbWOqPPAnyMEjYLVtMgoHxoYrW3"],
+  "notification": {
+    "title": "Breaking News",
+    "body": "New news story available."
+  },
+  "priority" : "high"
+}
+```
+
+Note: registration_ids merupakan token dari client yang di dapat dari `messaging.getToken`
+
+Response Success
+```
+{
+    "multicast_id": 6264045903538899953,
+    "success": 1,
+    "failure": 0,
+    "canonical_ids": 0,
+    "results": [
+        {
+            "message_id": "8c27c403-b278-4510-b24e-1fb5342c6eba"
+        }
+    ]
+}
+```
